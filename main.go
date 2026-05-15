@@ -43,7 +43,25 @@ func main() {
 	// Start proxy
 	go func() {
 		addr := fmt.Sprintf("0.0.0.0:%d", cfg.Port)
-		if err := http.ListenAndServe(addr, proxy); err != nil {
+
+		corsHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Method == "OPTIONS" {
+				origin := r.Header.Get("Origin")
+				if origin == "" {
+					origin = "*"
+				}
+				w.Header().Set("Access-Control-Allow-Origin", origin)
+				w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+				w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin, traceparent")
+				w.Header().Set("Access-Control-Allow-Credentials", "true")
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
+
+			proxy.ServeHTTP(w, r)
+		})
+
+		if err := http.ListenAndServe(addr, corsHandler); err != nil {
 			log.Fatalf("The Bouncer got knocked out: %v", err)
 		}
 	}()
