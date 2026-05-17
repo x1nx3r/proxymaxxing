@@ -6,10 +6,13 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 
 	tea "github.com/charmbracelet/bubbletea"
 
 	"proxymaxxing/the_bouncer"
+	"proxymaxxing/the_conduit"
 	"proxymaxxing/the_oracle"
 	"proxymaxxing/the_stage"
 )
@@ -35,6 +38,21 @@ func main() {
 
 	// Pre-hydrate before launching UI to avoid complex async loading UI state
 	the_oracle.Hydrate(cfg, *configPath)
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		<-sigChan
+		// Trigger cleanup if killed aggressively (e.g. SIGTERM)
+		the_conduit.Teardown(cfg.VPNProfileName)
+		os.Exit(0)
+	}()
+
+	conduitStatus, err := the_conduit.Setup(cfg)
+	if err != nil {
+		log.Printf("The Conduit failed to route: %v", err)
+	}
 
 	logChan := make(chan the_bouncer.LogEvent, 100)
 
@@ -67,8 +85,11 @@ func main() {
 	}()
 
 	// Start TUI
-	p := tea.NewProgram(the_stage.InitialModel(cfg, *configPath, logChan), tea.WithAltScreen())
+	p := tea.NewProgram(the_stage.InitialModel(cfg, *configPath, logChan, conduitStatus), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		log.Fatalf("The Stage collapsed: %v", err)
 	}
+	
+	// Graceful shutdown after TUI exits (e.g. user presses 'q')
+	the_conduit.Teardown(cfg.VPNProfileName)
 }

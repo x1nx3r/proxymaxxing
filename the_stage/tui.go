@@ -12,6 +12,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"proxymaxxing/the_bouncer"
+	"proxymaxxing/the_conduit"
 	"proxymaxxing/the_oracle"
 )
 
@@ -49,9 +50,11 @@ type Model struct {
 
 	width  int
 	height int
+
+	conduitInfo the_conduit.ConduitInfo
 }
 
-func InitialModel(cfg *the_oracle.Config, configPath string, logChan chan the_bouncer.LogEvent) Model {
+func InitialModel(cfg *the_oracle.Config, configPath string, logChan chan the_bouncer.LogEvent, conduitInfo the_conduit.ConduitInfo) Model {
 	vp := viewport.New(0, 0)
 	vp.YPosition = 4
 
@@ -61,12 +64,13 @@ func InitialModel(cfg *the_oracle.Config, configPath string, logChan chan the_bo
 	ti.Width = 40
 
 	return Model{
-		cfg:        cfg,
-		configPath: configPath,
-		activeTab:  0,
-		destInput:  ti,
-		logChan:    logChan,
-		viewport:   vp,
+		cfg:         cfg,
+		configPath:  configPath,
+		activeTab:   0,
+		destInput:   ti,
+		logChan:     logChan,
+		viewport:    vp,
+		conduitInfo: conduitInfo,
 	}
 }
 
@@ -125,10 +129,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 
 		case "tab", "right":
-			m.activeTab = (m.activeTab + 1) % 2
+			m.activeTab = (m.activeTab + 1) % 3
 			m.updateViewport()
 		case "shift+tab", "left":
-			m.activeTab = (m.activeTab - 1 + 2) % 2
+			m.activeTab = (m.activeTab - 1 + 3) % 3
 			m.updateViewport()
 
 		case "up", "k":
@@ -221,7 +225,7 @@ func (m Model) View() string {
 		return "Setting the stage..."
 	}
 
-	tabs := []string{"The Services", "The Inspector"}
+	tabs := []string{"The Services", "The Inspector", "The Conduit"}
 	var renderedTabs []string
 	for i, t := range tabs {
 		if m.activeTab == i {
@@ -238,6 +242,7 @@ func (m Model) View() string {
 		var b strings.Builder
 		addr := fmt.Sprintf("0.0.0.0:%d", m.cfg.Port)
 		b.WriteString(titleStyle.Render("Service Manager") + " " + subTitleStyle.Render(fmt.Sprintf("(Serving at %s)", addr)) + "\n")
+
 		b.WriteString(subTitleStyle.Render(fmt.Sprintf("Total Requests: %d | Rerouted: %d | Forwarded: %d", m.totalReq, m.reroutedReq, m.forwardedReq)) + "\n")
 		b.WriteString(subTitleStyle.Render("(Press Space to toggle hijack, 'i' to edit destination, Up/Down to navigate)") + "\n\n")
 
@@ -268,7 +273,7 @@ func (m Model) View() string {
 		}
 		content = b.String()
 
-	} else {
+	} else if m.activeTab == 1 {
 		var leftB strings.Builder
 		leftB.WriteString(titleStyle.Render("Services") + "\n\n")
 
@@ -294,6 +299,23 @@ func (m Model) View() string {
 		rightPane := panelBorderStyle.Width(m.width - (m.width / 3) - 2).Height(m.height - 5).Render(rightPaneContent)
 
 		content = lipgloss.JoinHorizontal(lipgloss.Top, leftPane, rightPane)
+	} else if m.activeTab == 2 {
+		var b strings.Builder
+		b.WriteString(titleStyle.Render("Split-Tunnel Information") + "\n\n")
+
+		if m.conduitInfo.VPNProfile == "" {
+			b.WriteString(subTitleStyle.Render(m.conduitInfo.Message))
+		} else {
+			b.WriteString(titleStyle.Render("Status: ") + statusOkStyle.Render("Active") + "\n")
+			b.WriteString(titleStyle.Render("Profile: ") + unselectedStyle.Render(m.conduitInfo.VPNProfile) + "\n")
+			b.WriteString(titleStyle.Render("Message: ") + subTitleStyle.Render(m.conduitInfo.Message) + "\n\n")
+			
+			b.WriteString(titleStyle.Render(fmt.Sprintf("Routed IPs (%d):", len(m.conduitInfo.RoutedIPs))) + "\n")
+			for _, ip := range m.conduitInfo.RoutedIPs {
+				b.WriteString(unselectedStyle.Render(fmt.Sprintf("  - %s", ip)) + "\n")
+			}
+		}
+		content = panelBorderStyle.Width(m.width - 2).Height(m.height - 4).Render(b.String())
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Left, header, "", content)

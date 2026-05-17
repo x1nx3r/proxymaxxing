@@ -25,9 +25,16 @@ type ServiceConfig struct {
 	HijackedRoutes     []string `yaml:"hijacked_routes,omitempty"`
 }
 
+type InfraConfig struct {
+	Name string `yaml:"name"`
+	IP   string `yaml:"ip"`
+}
+
 type Config struct {
-	Port     int             `yaml:"port"`
-	Services []ServiceConfig `yaml:"services"`
+	Port           int             `yaml:"port"`
+	VPNProfileName string          `yaml:"vpn_profile_name,omitempty"`
+	Infrastructure []InfraConfig   `yaml:"infrastructure,omitempty"`
+	Services       []ServiceConfig `yaml:"services"`
 }
 
 func ExtractRoutes(doc *openapi3.T) []string {
@@ -62,7 +69,6 @@ func Hydrate(cfg *Config, configPath string) bool {
 			continue
 		}
 
-		fmt.Printf("The Oracle is scrying %s...\n", svc.SwaggerURL)
 		u, err := url.Parse(svc.SwaggerURL)
 		if err != nil {
 			continue

@@ -20,16 +20,19 @@ You no longer have to mock authentication. You no longer have to run a convolute
 
 ## Architecture
 
-The codebase has been meticulously engineered into three highly logical (debatable, fight me) domains because putting everything in main.go was making us look bad.
+The codebase has been meticulously engineered into four highly logical (debatable, fight me) domains because putting everything in main.go was making us look bad.
 
 ### the_oracle
 Reads your configuration file. If the file is incomplete, it goes out to the internet, scrapes the Swagger definitions, infers the namespace routing, and overwrites your configuration file with the correct answers. It knows what your API looks like better than you do. It handles the tedious work so you don't have to.
+
+### the_conduit
+Automatically configures a split-tunnel VPN using Linux NetworkManager on boot. It dynamically resolves all your remote Swagger API hostnames, merges them with any explicit internal infrastructure IPs you need (like databases or Redis), and forcefully limits the VPN's scope strictly to those endpoints. It gracefully cleans up after itself on exit so your OS networking isn't permanently hijacked.
 
 ### the_bouncer
 A custom reverse proxy. It intercepts every HTTP request. If the request matches a hijacked route, the bouncer strips the prefix and forces it into your local port. If it doesn't, the bouncer sends it to the cloud. It also logs everything, because trust is earned, not given.
 
 ### the_stage
-A 60fps terminal user interface. It runs in the foreground so you look busy. You can use it to toggle routing hijacks with the spacebar, or press 'i' to change the destination port because you forgot what port your own code binds to. It also has a live request inspector so you can watch exactly how your frontend is malforming the payload before it even hits the server.
+A 60fps terminal user interface. It runs in the foreground so you look busy. You can use it to toggle routing hijacks with the spacebar, or press 'i' to change the destination port because you forgot what port your own code binds to. It has three tabs, including a live request inspector so you can watch exactly how your frontend is malforming the payload, and a Conduit status tab to track your split-tunneling.
 
 ## Tech Stack
 
@@ -47,6 +50,15 @@ Create a configuration file. The application will yell at you if you don't.
 
 ```yaml
 port: 8080
+vpn_profile_name: "Office-Staging-VPN" # Optional: Target NetworkManager connection
+
+# Optional: Explicit internal network targets (Databases, Redis, etc.)
+infrastructure:
+  - name: "Staging Postgres"
+    ip: "10.0.4.15"
+  - name: "Internal Redis"
+    ip: "redis.internal.company.com"
+
 services:
   - swagger_url: "https://api-dev.company.com/service-a/swagger.json"
     reroute_destination: "http://localhost:8081"
