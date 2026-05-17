@@ -124,6 +124,11 @@ func Teardown(vpnProfileName string) error {
 		return fmt.Errorf("failed to revert ignore-auto-routes: %w", err)
 	}
 
+	cmd = exec.Command("nmcli", "connection", "modify", vpnProfileName, "ipv4.never-default", "no")
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to revert never-default: %w", err)
+	}
+
 	// 2. Cycle the connection to apply the flush
 	exec.Command("nmcli", "connection", "down", vpnProfileName).Run()
 	cmd = exec.Command("nmcli", "connection", "up", vpnProfileName)
