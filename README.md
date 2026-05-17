@@ -14,9 +14,9 @@ Welcome to proxymaxxing. It solves this problem.
 
 It sits on your machine, binds to a port, and pretends to be your staging environment. 
 
-You give it a list of Swagger JSON URLs. It scrapes them, reads their base paths, and generates a routing table. If a request comes in for a route you are actively fixing, it strips the cloud prefix and throws it at the single local binary you are running. If a request comes in for anything else, it throws it over the fence to the actual staging environment. 
+You give it a list of Swagger JSON URLs. It scrapes them, reads their base paths, and generates a routing table. It also dynamically resolves those API hostnames and surgically injects them into your OS network stack as a split-tunnel VPN, forcing only the traffic you care about to pass through without destroying your ability to watch YouTube. If a request comes in for a route you are actively fixing, it strips the cloud prefix and throws it at the single local binary you are running. If a request comes in for anything else, it throws it over the fence to the actual staging environment. 
 
-You no longer have to mock authentication. You no longer have to run a convoluted docker-compose file that consumes all your RAM. You no longer have to wait for your own backend fix to be merged just so you can see if the frontend actually works. You just run this, spin up your one local backend binary alongside your local frontend, and pretend the cloud is local.
+You no longer have to mock authentication. You no longer have to manually wrestle with OpenVPN configurations just to hit an internal database. You no longer have to run a convoluted docker-compose file that consumes all your RAM. You no longer have to wait for your own backend fix to be merged just so you can see if the frontend actually works. You just run this, spin up your one local backend binary alongside your local frontend, and pretend the cloud is local.
 
 ## Architecture
 
