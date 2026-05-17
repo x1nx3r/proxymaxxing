@@ -25,7 +25,7 @@ The codebase has been meticulously engineered into four highly logical (debatabl
 ### the_oracle
 Executing first on boot, this domain reads your configuration file. If the file is incomplete, it goes out to the internet, scrapes the Swagger definitions via HTTP GET requests, traverses the OpenAPI schema to infer the namespace routing, and rewrites your configuration file with the correct answers to cache the route list. It knows what your API looks like better than you do. It handles the tedious work so you don't have to, ultimately passing the fully populated configuration struct to the rest of the application.
 
-### the_conduit
+### the_conduit (this is the only part of the stack that's not OS agnostic, it's just a glorified `nmcli` wrapper)
 Executing second, this domain automatically configures a split-tunnel VPN using Linux NetworkManager. It loops through the hostnames provided by `the_oracle`, performs DNS queries to resolve all their IPv4 addresses, and merges them with any explicit internal infrastructure IPs you need (like databases or Redis). It then issues precise `nmcli` commands to flip the target VPN profile into "ignore-auto-routes" mode, injects exactly those IPs with `/32` CIDR masks, and cycles the connection to forcefully limit the VPN's scope strictly to those endpoints. It also registers a signal listener in `main.go` to gracefully clean up after itself on exit so your OS networking isn't permanently hijacked.
 
 ### the_bouncer
